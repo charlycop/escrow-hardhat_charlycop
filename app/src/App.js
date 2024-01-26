@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import deploy from './deploy';
 import Escrow from './Escrow';
 import AddContract from './addContract';
+import Escrows from './artifacts/contracts/Escrow.sol/Escrow';
 
 import { fetchEscrows, persistEscrow } from './persistence';
 
@@ -14,6 +15,35 @@ export async function approve(escrowContract, signer) {
   console.log(approveTxn);
 }
 
+function test(escrows){
+  let buttonId;
+  const contractABI = Escrows.abi;
+  let deployedContract;
+  const signer = provider.getSigner()
+
+  for(let i = 0 ; i < escrows.length ; i++){
+    buttonId = `approve-${i}`;
+    deployedContract = new ethers.Contract(escrows[i].contract, contractABI, provider);
+    
+    document.getElementById(buttonId).addEventListener('click', async () => {
+      await deployedContract.connect(signer).approve();
+    });
+
+    deployedContract.on('Approved', () => {
+      document.getElementById(buttonId).className = 'complete';
+      document.getElementById(buttonId).innerText = "✓ It's been approved!";
+      console.log("APPROVED!");
+    });
+
+  }
+
+
+  // if (approved) {
+  //   document.getElementById(buttonId).className = 'complete';
+  //   document.getElementById(buttonId).innerText = "✓ It's been approved!";
+  // } 
+}
+
 function App() {
   const [escrows, setEscrows] = useState([]);
   const [account, setAccount] = useState();
@@ -21,7 +51,10 @@ function App() {
   const [debug, setDebug] = useState();
   const [id, setId] = useState();
 
+  
   useEffect(() => {
+
+  
     async function getAccounts() {
       const accounts = await provider.send('eth_requestAccounts', []);
 
@@ -41,6 +74,8 @@ function App() {
 
     // Get the escrows from the persistent storage
     initializeEscrows();
+    console.log("LONGUEUR : ", escrows.length);
+
   }, [account]);
 
   async function newContract() {
@@ -66,11 +101,12 @@ function App() {
 
     setId(id+1);
     setEscrows([...escrows, escrow]);
-    console.log(escrows.length);
+    console.log("LONGUEUR : ", escrows.length);
     // add in the server escrow list json file
     await persistEscrow(escrow);
 
   }
+
 
   return (
     <>
@@ -107,10 +143,14 @@ function App() {
       <div className="existing-contracts">
         <h1> Existing Contracts </h1>
 
-        <div id="container">     
+        <div id="container">    
+
           {escrows.map((escrow) => {
-            return <AddContract key={escrow.id} {...escrow}/>;
+            return  <AddContract key={escrow.contract} {...escrow}/>;
+            console.log("test");
           })}
+          
+          
         </div>
       </div>
     </>
