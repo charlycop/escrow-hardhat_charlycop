@@ -14,7 +14,7 @@ contract Escrow {
 		depositor = msg.sender;
 	}
 
-	event Approved(uint);
+	event Approved(uint indexed balancetosee);
 
 	function approve() external {
 		require(msg.sender == arbiter);

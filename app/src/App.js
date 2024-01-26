@@ -2,18 +2,24 @@ import { ethers } from 'ethers';
 import { useEffect, useState } from 'react';
 import deploy from './deploy';
 import Escrow from './Escrow';
+import AddContract from './addContract';
+
+import { fetchEscrows, persistEscrow } from './persistence';
 
 const provider = new ethers.providers.Web3Provider(window.ethereum);
 
 export async function approve(escrowContract, signer) {
   const approveTxn = await escrowContract.connect(signer).approve();
   await approveTxn.wait();
+  console.log(approveTxn);
 }
 
 function App() {
   const [escrows, setEscrows] = useState([]);
   const [account, setAccount] = useState();
   const [signer, setSigner] = useState();
+  const [debug, setDebug] = useState();
+  const [id, setId] = useState();
 
   useEffect(() => {
     async function getAccounts() {
@@ -21,36 +27,49 @@ function App() {
 
       setAccount(accounts[0]);
       setSigner(provider.getSigner());
+      setDebug(true);
+      setId(0);
     }
 
     getAccounts();
+
+    // Fetch escrows when the component mounts
+    async function initializeEscrows() {
+      const fetchedEscrows = await fetchEscrows();
+      setEscrows(fetchedEscrows);
+    }
+
+    // Get the escrows from the persistent storage
+    initializeEscrows();
   }, [account]);
 
   async function newContract() {
-    const beneficiary = document.getElementById('beneficiary').value;
-    const arbiter = document.getElementById('arbiter').value;
-    const value = ethers.utils.parseEther(document.getElementById('wei').value);//ethers.BigNumber.from(document.getElementById('wei').value);
+    const arbiterStr = '0xbDA5747bFD65F08deb54cb465eB87D40e51B197E';
+    const beneficiaryStr = '0xdD2FD4581271e230360230F9337D5c0430Bf44C0';
+
+
+    const beneficiary = (debug) ? arbiterStr     : document.getElementById('beneficiary').value;
+    const arbiter     = (debug) ? beneficiaryStr : document.getElementById('arbiter').value;
+    const value       = (debug) ? ethers.utils.parseEther('1') : ethers.utils.parseEther(document.getElementById('wei').value);//ethers.BigNumber.from(document.getElementById('wei').value);
+
     const escrowContract = await deploy(signer, arbiter, beneficiary, value);
-
-
+    console.log(escrowContract);
+    
     const escrow = {
-      address: escrowContract.address,
+      id : escrows.length,
+      contract : escrowContract.address,
       arbiter,
       beneficiary,
-      value: value.toString(),
-      handleApprove: async () => {
-        escrowContract.on('Approved', () => {
-          document.getElementById(escrowContract.address).className =
-            'complete';
-          document.getElementById(escrowContract.address).innerText =
-            "✓ It's been approved!";
-        });
-
-        await approve(escrowContract, signer);
-      },
+      approved : false,
+      value: value.toString()       
     };
 
+    setId(id+1);
     setEscrows([...escrows, escrow]);
+    console.log(escrows.length);
+    // add in the server escrow list json file
+    await persistEscrow(escrow);
+
   }
 
   return (
@@ -88,9 +107,9 @@ function App() {
       <div className="existing-contracts">
         <h1> Existing Contracts </h1>
 
-        <div id="container">
+        <div id="container">     
           {escrows.map((escrow) => {
-            return <Escrow key={escrow.address} {...escrow} />;
+            return <AddContract key={escrow.id} {...escrow}/>;
           })}
         </div>
       </div>
