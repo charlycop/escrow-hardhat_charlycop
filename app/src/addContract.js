@@ -12,36 +12,29 @@ const provider = new ethers.providers.Web3Provider(window.ethereum);
   value
 }
 ) {
-  //return (<div> Arbiter </div>);
   const buttonId = `approve-${id}`;
-  // const contractABI = Escrow.abi;
 
-  // const deployedContract = new ethers.Contract(contract, contractABI, provider);
-  // const signer = provider.getSigner()
-  //const container = document.getElementById('container');
-
-  //container.innerHTML += createHTML(buttonId, arbiter, beneficiary, value);
-
-  // if (approved) {
-  //   document.getElementById(buttonId).className = 'complete';
-  //   document.getElementById(buttonId).innerText = "✓ It's been approved!";
-  // } 
-
-  // document.getElementById(buttonId).addEventListener('click', async () => {
-  //   await deployedContract.connect(signer).approve();
-  // });
-
-  // deployedContract.on('Approved', () => {
-  //   document.getElementById(buttonId).className = 'complete';
-  //   document.getElementById(buttonId).innerText = "✓ It's been approved!";
-  //   console.log("APPROVED!");
-
-  console.log("ON ENTRE");
-  return (createHTML(buttonId, arbiter, beneficiary, value));
- //});
+  return (createHTML(buttonId, arbiter, beneficiary, value, contract, approved));
 }
 
-function createHTML(buttonId, arbiter, beneficiary, value) {
+async function  configLink(buttonId, contract, approved){
+  const contractABI = Escrow.abi;
+  const deployedContract = new ethers.Contract(contract, contractABI, provider);
+  const signer = provider.getSigner();
+
+  // console.log('is Approved ?' , await deployedContract.connect(signer).isApproved());
+
+  deployedContract.on('Approved', () => {
+    document.getElementById(buttonId).className = 'complete';
+    document.getElementById(buttonId).innerText = "✓ It's been approved!";
+  });
+
+  await deployedContract.connect(signer).approve();
+}
+
+function createHTML(buttonId, arbiter, beneficiary, value, contract, approved) {
+
+  
   return (
     <div class="existing-contract">
       <ul className="fields">
@@ -61,7 +54,12 @@ function createHTML(buttonId, arbiter, beneficiary, value) {
           <div> Value </div>
           <div> {ethers.utils.formatEther(value)} ETH </div>
         </li>
-        <div class="button" id="${buttonId}">
+        <div class="button" id={buttonId}
+        onClick={(e) => {
+          e.preventDefault();
+          configLink(buttonId, contract, approved);
+        }}
+        >
           Approve
         </div>
       </ul>
